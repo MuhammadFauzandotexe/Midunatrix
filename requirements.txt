@@ -1,4 +1,5 @@
 opencv-python
+imutils
 redis
 matplotlib
 scipy
