@@ -79,16 +79,22 @@ def load_config(file_path):
             "CYAN": {"lower": [80, 100, 100], "upper": [100, 255, 255]},
             "MAGENTA": {"lower": [140, 100, 100], "upper": [160, 255, 255]}
         }
-        save_config(file_path, default_config)
+        with open(file_path, 'w') as file:
+            json.dump(default_config, file, indent=4)
+        print(f"[INFO] Configuration saved to {file_path}")
         return default_config
 
 # Fungsi untuk menyimpan konfigurasi warna ke file
-def save_config(file_path, config):
-    with open(file_path, 'w') as file:
-        json.dump(config, file, indent=4)
-    print(f"[INFO] Configuration saved to {file_path}")
-
-
+def save_config(file_path, new_lower, new_upper, color):
+    with open(file_path, "r+") as file:
+        data = json.load(file)
+        if color.value in data:
+            data[color.value]["lower"] = new_lower
+            data[color.value]["upper"] = new_upper
+            file.seek(0)  # Kembali ke awal file untuk menulis ulang
+            json.dump(data, file, indent=4)
+            file.truncate()  # Menghapus konten file setelah posisi akhir data baru
+    print(f"Konfigurasi untuk {color.value} telah diperbarui.")
 
 # Fungsi untuk menghitung sudut
 def calculate_angle(origin, point):
@@ -138,7 +144,7 @@ def config_frame(frame, lower_orange, upper_orange):
 # Fungsi utama
 def main():
     # Variabel untuk trackbar
-    trackbar_active = None
+    trackbar_active:Color = Color.STAND_BY
     trackbar_window = "Settings"
 
     config = load_config(CONFIG_FILE)
@@ -192,12 +198,12 @@ def main():
                 cv2.namedWindow(trackbar_window)
                 create_trackbars(trackbar_window, Color.MAGENTA)
                 trackbar_active = Color.MAGENTA
-        elif key == ord("s") and trackbar_active== Color.MATCH:
+        elif key == ord("s") and (trackbar_active != Color.MATCH or trackbar_active != Color.STAND_BY ):
             if trackbar_active:
                 new_lower_hsv, new_upper_hsv = get_trackbar_values(trackbar_window)
-                print(f"saving new value : {trackbar_active.value } {new_lower_hsv} {new_upper_hsv}")
+                # print(f"saving new value : {trackbar_active.value } {new_lower_hsv} {new_upper_hsv}")
                 # config[trackbar_active] = {"lower": new_lower_hsv, "upper": new_upper_hsv}
-                # save_config(CONFIG_FILE, config)
+                save_config(CONFIG_FILE, new_lower_hsv,new_upper_hsv, trackbar_active)
 
         fps.update()
     fps.stop()
