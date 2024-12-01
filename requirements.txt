@@ -1,0 +1,7 @@
+opencv-python
+redis
+matplotlib
+scipy
+pandas
+requests
+flask
