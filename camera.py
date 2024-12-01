@@ -6,11 +6,12 @@ import time
 import math
 from imutils.video import VideoStream, FPS
 from enum import Enum
+import os
 
 #=================================== initial config or Final Variable
 
 CONFIG_FILE = "config.json"
-
+image_path = "icon.png"
 def nothing(x):
     pass
 
@@ -94,7 +95,7 @@ def save_config(file_path, new_lower, new_upper, color):
             file.seek(0)  # Kembali ke awal file untuk menulis ulang
             json.dump(data, file, indent=4)
             file.truncate()  # Menghapus konten file setelah posisi akhir data baru
-    print(f"Konfigurasi untuk {color.value} telah diperbarui.")
+    print(f"Config for {color.value} has been updated.")
 
 # Fungsi untuk menghitung sudut
 def calculate_angle(origin, point):
@@ -157,7 +158,7 @@ def main():
     while True:
         frame = vs.read()
         if frame is None:
-            print("Gagal menangkap gambar")
+            print("Cam error")
             break
         frame = imutils.resize(frame, width=500)
 
@@ -173,37 +174,46 @@ def main():
             frame, mask = config_frame(frame, lower, upper)
         else:
             frame, mask = config_frame(frame, orange_lower, orange_upper)
+        
+        # tampilan default nya 
+        if trackbar_active == Color.STAND_BY:
+            image = cv2.imread(image_path)  # Membaca gambar
+            image = cv2.resize(image,[600,400])
+            if image is not None:
+                cv2.imshow("Stand By", image)  # Menampilkan gambar
+            else:
+                print("Image Not Found!")
 
-        cv2.imshow(f"Frame {trackbar_active.value if trackbar_active else 'Match'}", frame)
-        cv2.imshow(f"Mask {trackbar_active.value if trackbar_active else 'Match'}", mask)
-
+        
         key = cv2.waitKey(1) & 0xFF
-        if key == ord("q"):
+
+        if key == ord("q"):  # Keluar
             break
-        elif key == ord("1"):
-            if trackbar_active != Color.ORANGE:
+        elif key == ord("x"):  # Buka gambar ulang
+            trackbar_active = Color.STAND_BY
+            cv2.destroyAllWindows()
+            image = cv2.imread(image_path)  # Membaca gambar
+            image = cv2.resize(image,[600,400])
+            if image is not None:
+                cv2.imshow("Stand By", image)  # Menampilkan gambar
+            else:
+                print("Image Not Found!")
+        elif key in [ord("1"), ord("2"), ord("3")]:  # Beralih trackbar
+            color_map = {ord("1"): Color.ORANGE, ord("2"): Color.CYAN, ord("3"): Color.MAGENTA}
+            selected_color = color_map[key]
+            if trackbar_active != selected_color:
                 cv2.destroyAllWindows()
                 cv2.namedWindow(trackbar_window)
-                create_trackbars(trackbar_window, Color.ORANGE)
-                trackbar_active = Color.ORANGE
-        elif key == ord("2"):
-            if trackbar_active != Color.CYAN:
-                cv2.destroyAllWindows()
-                cv2.namedWindow(trackbar_window)
-                create_trackbars(trackbar_window, Color.CYAN)
-                trackbar_active = Color.CYAN
-        elif key == ord("3"):
-            if trackbar_active != Color.MAGENTA:
-                cv2.destroyAllWindows()
-                cv2.namedWindow(trackbar_window)
-                create_trackbars(trackbar_window, Color.MAGENTA)
-                trackbar_active = Color.MAGENTA
-        elif key == ord("s") and (trackbar_active != Color.MATCH or trackbar_active != Color.STAND_BY ):
-            if trackbar_active:
-                new_lower_hsv, new_upper_hsv = get_trackbar_values(trackbar_window)
-                # print(f"saving new value : {trackbar_active.value } {new_lower_hsv} {new_upper_hsv}")
-                # config[trackbar_active] = {"lower": new_lower_hsv, "upper": new_upper_hsv}
-                save_config(CONFIG_FILE, new_lower_hsv,new_upper_hsv, trackbar_active)
+                create_trackbars(trackbar_window, selected_color)
+                trackbar_active = selected_color
+                cv2.imshow(f"Frame {selected_color.value}", frame)
+        elif key == ord("s") and trackbar_active not in [Color.MATCH, Color.STAND_BY]:
+            new_lower_hsv, new_upper_hsv = get_trackbar_values(trackbar_window)
+            save_config(CONFIG_FILE, new_lower_hsv, new_upper_hsv, trackbar_active)
+
+        # Tampilkan frame dan mask untuk trackbar aktif
+        if trackbar_active not in [Color.MATCH, Color.STAND_BY]:
+            cv2.imshow(f"Frame {trackbar_active.value}", frame)        
 
         fps.update()
     fps.stop()
